@@ -1,4 +1,4 @@
-import { Modal } from "obsidian";
+import { Modal, Setting } from "obsidian";
 import type GitHubApiSyncPlugin from "../main";
 
 export class SyncLogModal extends Modal {
@@ -12,7 +12,8 @@ export class SyncLogModal extends Modal {
   async onOpen(): Promise<void> {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Sync Log" });
+
+    new Setting(contentEl).setHeading().setName("Sync log");
 
     const logs = await this.plugin.loadSyncLogs();
     if (logs.length === 0) {
@@ -30,7 +31,11 @@ export class SyncLogModal extends Modal {
     textarea.readOnly = true;
     textarea.rows = 18;
     textarea.cols = 60;
-    textarea.style.width = "100%";
-    textarea.style.minHeight = "320px";
+    textarea.addClass("github-api-sync-log-textarea");
+  }
+
+  onClose(): void {
+    const { contentEl } = this;
+    contentEl.empty();
   }
 }

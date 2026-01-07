@@ -23,3 +23,9 @@
 .github-sync-ribbon-icon:hover {
   opacity: 0.8;
 }
+
+/* Sync log textarea */
+.github-api-sync-log-textarea {
+  width: 100%;
+  min-height: 320px;
+}

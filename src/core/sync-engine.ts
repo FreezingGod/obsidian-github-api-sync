@@ -107,7 +107,7 @@ export class DefaultSyncEngine implements SyncEngine {
           await this.log("info", `  → ${op.type}: ${op.from} -> ${op.to}`);
         }
       }
-      const { resolvedOps, conflictRecords } = await this.resolver.resolve(
+      const { resolvedOps, conflictRecords } = this.resolver.resolve(
         conflicts,
         config.conflictPolicy
       );
@@ -161,8 +161,8 @@ export class DefaultSyncEngine implements SyncEngine {
     ops: SyncOp[],
     conflicts: SyncOp[],
     config: SyncConfig,
-    local: LocalIndex,
-    remote: RemoteIndex
+    _local: LocalIndex,
+    _remote: RemoteIndex
   ): Promise<void> {
     const failures: string[] = [];
     const renameRemote = ops.filter((op) => op.type === "rename_remote") as Array<{
@@ -476,7 +476,7 @@ export class DefaultSyncEngine implements SyncEngine {
     }
   }
 
-  private async nextConflictPath(path: string, tag: string): Promise<string> {
+  private nextConflictPath(path: string, tag: string): string {
     const normalized = normalizePath(path);
     const timestamp = this.formatTimestamp(new Date());
     const dotIndex = normalized.lastIndexOf(".");

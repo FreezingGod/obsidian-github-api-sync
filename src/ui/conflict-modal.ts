@@ -1,4 +1,4 @@
-import { Modal } from "obsidian";
+import { Modal, Setting } from "obsidian";
 import type GitHubApiSyncPlugin from "../main";
 import type { ConflictRecord } from "../types/sync-types";
 
@@ -17,7 +17,8 @@ export class ConflictModal extends Modal {
   private async render(): Promise<void> {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.createEl("h2", { text: "Sync Conflicts" });
+
+    new Setting(contentEl).setHeading().setName("Sync conflicts");
 
     const conflicts = await this.plugin.loadConflicts();
     if (conflicts.length === 0) {
@@ -51,5 +52,10 @@ export class ConflictModal extends Modal {
       await this.plugin.resolveConflict(entry, "keepBoth");
       await this.render();
     };
+  }
+
+  onClose(): void {
+    const { contentEl } = this;
+    contentEl.empty();
   }
 }

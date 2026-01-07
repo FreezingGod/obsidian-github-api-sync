@@ -1,5 +1,4 @@
 import { normalizePath, TFile, type App } from "obsidian";
-import { createHash } from "crypto";
 import picomatch from "picomatch";
 import type { LocalIndex, SyncBaseline } from "../types/sync-types";
 import type { LocalIndexer } from "../types/interfaces";
@@ -75,8 +74,11 @@ export class LocalVaultIndexer implements LocalIndexer {
 
   async computeHash(file: TFile): Promise<string> {
     const data = await this.app.vault.readBinary(file);
-    const buffer = Buffer.from(data);
-    return createHash("sha256").update(buffer).digest("hex");
+    const buffer = new Uint8Array(data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    return hashHex;
   }
 
   private isUnderRoot(file: TFile, rootPath: string): boolean {

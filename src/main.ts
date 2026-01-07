@@ -27,7 +27,7 @@ export default class GitHubApiSyncPlugin extends Plugin {
     this.addSettingTab(new SettingsView(this.app, this));
 
     // Add ribbon icon for quick sync
-    this.ribbonIconEl = this.addRibbonIcon("refresh-cw", "GitHub Sync", async (evt: MouseEvent) => {
+    this.ribbonIconEl = this.addRibbonIcon("refresh-cw", "GitHub sync", async (_evt: MouseEvent) => {
       await this.runSync();
     });
     // Add class for custom styling if needed

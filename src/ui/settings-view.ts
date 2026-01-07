@@ -13,10 +13,10 @@ export class SettingsView extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "GitHub API Sync" });
+    new Setting(containerEl).setHeading().setName("GitHub API sync");
 
     new Setting(containerEl)
-      .setName("GitHub Token")
+      .setName("GitHub token")
       .setDesc("Requires repo scope for private repositories.")
       .addText((text) =>
         text
@@ -65,7 +65,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Root Path")
+      .setName("Root path")
       .setDesc("Vault-relative path to sync. Leave empty for entire vault.")
       .addText((text) =>
         text
@@ -78,7 +78,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Ignore Patterns")
+      .setName("Ignore patterns")
       .setDesc("Comma-separated list of ignore patterns.")
       .addTextArea((text) =>
         text
@@ -94,7 +94,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Conflict Policy")
+      .setName("Conflict policy")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("keepBoth", "Keep both")
@@ -109,7 +109,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Sync Interval (minutes)")
+      .setName("Sync interval (minutes)")
       .setDesc("Leave empty to disable scheduled sync.")
       .addText((text) =>
         text

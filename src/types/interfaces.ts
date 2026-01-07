@@ -46,7 +46,7 @@ export interface ConflictResolver {
   resolve(
     conflicts: SyncOp[],
     policy: SyncConfig["conflictPolicy"]
-  ): Promise<{ resolvedOps: SyncOp[]; conflictRecords: ConflictRecord[] }>;
+  ): { resolvedOps: SyncOp[]; conflictRecords: ConflictRecord[] };
 }
 
 export interface GitHubClient {

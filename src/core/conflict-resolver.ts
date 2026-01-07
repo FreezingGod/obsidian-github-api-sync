@@ -8,10 +8,10 @@ type ConflictReason =
   | "local-missing-remote";
 
 export class DefaultConflictResolver implements ConflictResolver {
-  async resolve(
+  resolve(
     conflicts: SyncOp[],
     policy: SyncConfig["conflictPolicy"]
-  ): Promise<{ resolvedOps: SyncOp[]; conflictRecords: ConflictRecord[] }> {
+  ): { resolvedOps: SyncOp[]; conflictRecords: ConflictRecord[] } {
     const resolvedOps: SyncOp[] = [];
     const conflictRecords: ConflictRecord[] = [];
 

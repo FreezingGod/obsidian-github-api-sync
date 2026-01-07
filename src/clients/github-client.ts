@@ -1,3 +1,4 @@
+import { requestUrl } from "obsidian";
 import type { RemoteIndex } from "../types/sync-types";
 import type { GitHubClient } from "../types/interfaces";
 
@@ -19,7 +20,7 @@ export class GitHubApiClient implements GitHubClient {
       ref,
     });
     const response = await this.request(url, { method: "GET" });
-    const data = (await response.json()) as { content: string; sha: string };
+    const data = response.json as { content: string; sha: string };
     return { content: data.content.replace(/\n/g, ""), sha: data.sha };
   }
 
@@ -55,7 +56,7 @@ export class GitHubApiClient implements GitHubClient {
       recursive: "1",
     });
     const response = await this.request(url, { method: "GET" });
-    const data = (await response.json()) as {
+    const data = response.json as {
       tree: Array<{ path: string; sha: string; size?: number; type: string }>;
     };
 
@@ -79,7 +80,7 @@ export class GitHubApiClient implements GitHubClient {
   async getCommitSha(branch: string): Promise<string> {
     const url = this.buildUrl(`/repos/${this.owner}/${this.repo}/commits/${encodeURIComponent(branch)}`);
     const response = await this.request(url, { method: "GET" });
-    const data = (await response.json()) as { sha: string };
+    const data = response.json as { sha: string };
     return data.sha;
   }
 
@@ -87,7 +88,7 @@ export class GitHubApiClient implements GitHubClient {
     const url = this.buildUrl(`/repos/${this.owner}/${this.repo}/commits/${encodeURIComponent(branch)}`);
     try {
       const response = await this.request(url, { method: "GET" });
-      const data = (await response.json()) as {
+      const data = response.json as {
         sha: string;
         commit: { committer?: { date?: string } };
       };
@@ -109,7 +110,7 @@ export class GitHubApiClient implements GitHubClient {
   }> {
     const url = this.buildUrl(`/repos/${this.owner}/${this.repo}`);
     const response = await this.request(url, { method: "GET" });
-    const data = (await response.json()) as {
+    const data = response.json as {
       private: boolean;
       permissions?: { push?: boolean; pull?: boolean };
     };
@@ -122,7 +123,7 @@ export class GitHubApiClient implements GitHubClient {
     }
     const url = this.buildUrl(`/repos/${this.owner}/${this.repo}/git/commits/${encodeURIComponent(commitSha)}`);
     const response = await this.request(url, { method: "GET" });
-    const data = (await response.json()) as { tree: { sha: string } };
+    const data = response.json as { tree: { sha: string } };
     return data.tree.sha;
   }
 
@@ -132,7 +133,7 @@ export class GitHubApiClient implements GitHubClient {
       method: "POST",
       body: JSON.stringify({ content: contentBase64, encoding: "base64" }),
     });
-    const data = (await response.json()) as { sha: string };
+    const data = response.json as { sha: string };
     return data.sha;
   }
 
@@ -151,7 +152,7 @@ export class GitHubApiClient implements GitHubClient {
       method: "POST",
       body: JSON.stringify(body),
     });
-    const data = (await response.json()) as { sha: string };
+    const data = response.json as { sha: string };
     return data.sha;
   }
 
@@ -161,7 +162,7 @@ export class GitHubApiClient implements GitHubClient {
       method: "POST",
       body: JSON.stringify({ message, tree: treeSha, parents }),
     });
-    const data = (await response.json()) as { sha: string };
+    const data = response.json as { sha: string };
     return data.sha;
   }
 
@@ -203,7 +204,7 @@ export class GitHubApiClient implements GitHubClient {
     );
     try {
       const response = await this.request(url, { method: "GET" });
-      const data = (await response.json()) as {
+      const data = response.json as {
         files?: Array<{ filename: string; status: string; previous_filename?: string; sha?: string }>;
         commits?: Array<{ commit?: { committer?: { date?: string } } }>;
       };
@@ -222,35 +223,46 @@ export class GitHubApiClient implements GitHubClient {
     }
   }
 
-  private async request(url: string, init: RequestInit): Promise<Response> {
+  private async request(url: string, init: { method: string; body?: string }): Promise<{
+    status: number;
+    json: unknown;
+    headers: Record<string, string>;
+  }> {
     let attempt = 0;
     while (attempt <= this.maxRetries) {
-      const response = await fetch(url, {
-        ...init,
+      const response = await requestUrl({
+        url,
+        method: init.method as "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
         headers: {
           Authorization: `Bearer ${this.token}`,
           Accept: "application/vnd.github+json",
           "Content-Type": "application/json",
-          ...(init.headers ?? {}),
+          "X-GitHub-Api-Version": "2022-11-28",
         },
+        body: init.body,
       });
 
-      if (response.ok) {
-        return response;
+      if (response.status >= 200 && response.status < 300) {
+        return {
+          status: response.status,
+          json: response.json,
+          headers: response.headers,
+        };
       }
 
-      const shouldRetry = this.shouldRetry(response, attempt);
+      const shouldRetry = this.shouldRetry(response.status, attempt);
       if (response.status === 409) {
-        const text = await response.text();
-        throw new Error(`GitHub API conflict (409): ${text}`);
+        throw new Error(`GitHub API conflict (409): ${response.text}`);
       }
 
       if (!shouldRetry) {
-        const text = await response.text();
-        throw new Error(`GitHub API error ${response.status}: ${text}`);
+        if (response.status === 401) {
+          throw new Error(`GitHub authentication failed (401). Please check your token has the correct permissions (repo scope for private repositories).`);
+        }
+        throw new Error(`GitHub API error ${response.status}: ${response.text}`);
       }
 
-      const delayMs = this.getRetryDelayMs(response, attempt);
+      const delayMs = this.getRetryDelayMs(response.status, attempt);
       await this.sleep(delayMs);
       attempt += 1;
     }
@@ -275,49 +287,30 @@ export class GitHubApiClient implements GitHubClient {
       .join("/");
   }
 
-  private shouldRetry(response: Response, attempt: number): boolean {
+  private shouldRetry(status: number, attempt: number): boolean {
     if (attempt >= this.maxRetries) {
       return false;
     }
 
-    if (response.status === 401 || response.status === 404) {
+    if (status === 401 || status === 404) {
       return false;
     }
 
-    if ([429, 500, 502, 503, 504].includes(response.status)) {
+    if ([429, 500, 502, 503, 504].includes(status)) {
       return true;
     }
 
-    if (response.status === 403) {
-      const remaining = response.headers.get("x-ratelimit-remaining");
-      return remaining === "0";
+    if (status === 403) {
+      // Rate limit - will be handled by retry-after
+      return true;
     }
 
     return false;
   }
 
-  private getRetryDelayMs(response: Response, attempt: number): number {
-    const retryAfter = response.headers.get("retry-after");
-    if (retryAfter) {
-      const seconds = Number(retryAfter);
-      if (Number.isFinite(seconds)) {
-        return Math.min(seconds * 1000, 30_000);
-      }
-    }
-
-    if (response.status === 403) {
-      const reset = response.headers.get("x-ratelimit-reset");
-      if (reset) {
-        const resetSeconds = Number(reset);
-        if (Number.isFinite(resetSeconds)) {
-          const delay = resetSeconds * 1000 - Date.now();
-          return Math.min(Math.max(delay, 1_000), 30_000);
-        }
-      }
-    }
-
+  private getRetryDelayMs(status: number, attempt: number): number {
     const base = 500 * Math.pow(2, attempt);
-    return Math.min(base, 5_000);
+    return Math.min(base, 5000);
   }
 
   private async sleep(ms: number): Promise<void> {

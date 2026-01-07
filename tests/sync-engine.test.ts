@@ -62,7 +62,7 @@ describe("DefaultSyncEngine", () => {
     };
 
     const resolver = {
-      resolve: vi.fn().mockResolvedValue({ resolvedOps: [], conflictRecords: [] }),
+      resolve: vi.fn().mockReturnValue({ resolvedOps: [], conflictRecords: [] }),
     };
 
     const gitClient = {
