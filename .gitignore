@@ -1,3 +1,4 @@
 devdocs
 dist
 node_modules
+.eslintrc.cjs
