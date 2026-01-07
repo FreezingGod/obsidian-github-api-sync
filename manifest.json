@@ -1,0 +1,10 @@
+{
+  "id": "github-api-sync",
+  "name": "GitHub API Sync",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Bidirectional sync for Obsidian journals via GitHub API.",
+  "author": "Nathan Ling",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}

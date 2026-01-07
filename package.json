@@ -1,0 +1,21 @@
+{
+  "name": "github-api-sync",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/validate-manifest.mjs && node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "validate": "node scripts/validate-manifest.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/picomatch": "^4.0.2",
+    "esbuild": "^0.21.5",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.3"
+  }
+}

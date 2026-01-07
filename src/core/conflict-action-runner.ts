@@ -1,0 +1,195 @@
+import { normalizePath, TFile, type App } from "obsidian";
+import type { ConflictRecord, SyncConfig } from "../types/sync-types";
+import type { GitHubClient } from "../types/interfaces";
+
+export type ConflictAction = "keepLocal" | "keepRemote" | "keepBoth";
+
+export class ConflictActionRunner {
+  private app: App;
+  private client: GitHubClient;
+
+  constructor(app: App, client: GitHubClient) {
+    this.app = app;
+    this.client = client;
+  }
+
+  async resolve(record: ConflictRecord, action: ConflictAction, config: SyncConfig): Promise<void> {
+    if (action === "keepLocal") {
+      await this.applyPreferLocal(record, config);
+      return;
+    }
+
+    if (action === "keepRemote") {
+      await this.applyPreferRemote(record, config);
+      return;
+    }
+
+    await this.applyKeepBoth(record, config);
+  }
+
+  private async applyPreferLocal(record: ConflictRecord, config: SyncConfig): Promise<void> {
+    if (record.reason === "delete-modify-local" || record.reason === "local-missing-remote") {
+      await this.deleteRemote(record.path, config.branch);
+      return;
+    }
+
+    await this.pushLocal(record.path, config.branch);
+  }
+
+  private async applyPreferRemote(record: ConflictRecord, config: SyncConfig): Promise<void> {
+    if (record.reason === "delete-modify-remote") {
+      await this.deleteLocal(record.path);
+      return;
+    }
+
+    await this.pullRemote(record.path, config.branch);
+  }
+
+  private async applyKeepBoth(record: ConflictRecord, config: SyncConfig): Promise<void> {
+    if (record.reason === "local-missing-remote") {
+      await this.pullRemote(record.path, config.branch);
+      return;
+    }
+    const conflictPath = await this.nextConflictPath(record.path, "conflict-manual");
+    if (record.reason === "modify-modify") {
+      await this.pullRemoteCopy(record.path, conflictPath, config.branch);
+      return;
+    }
+
+    if (record.reason === "delete-modify-local") {
+      await this.pullRemoteCopy(record.path, conflictPath, config.branch);
+      return;
+    }
+
+    if (record.reason === "delete-modify-remote") {
+      await this.copyLocal(record.path, conflictPath);
+    }
+  }
+
+  private async pullRemote(path: string, branch: string): Promise<void> {
+    const normalized = normalizePath(path);
+    const { content } = await this.client.getFile(normalized, branch);
+    const buffer = Buffer.from(content, "base64");
+    await this.ensureParentFolder(normalized);
+    const existing = this.app.vault.getAbstractFileByPath(normalized);
+    if (existing && existing instanceof TFile) {
+      await this.app.vault.modifyBinary(existing, buffer);
+      return;
+    }
+
+    await this.app.vault.createBinary(normalized, buffer);
+  }
+
+  private async pullRemoteCopy(path: string, targetPath: string, branch: string): Promise<void> {
+    const normalized = normalizePath(path);
+    const { content } = await this.client.getFile(normalized, branch);
+    const buffer = Buffer.from(content, "base64");
+    await this.ensureParentFolder(targetPath);
+    await this.app.vault.createBinary(targetPath, buffer);
+  }
+
+  private async pushLocal(path: string, branch: string): Promise<void> {
+    const normalized = normalizePath(path);
+    const abstractFile = this.app.vault.getAbstractFileByPath(normalized);
+    if (!abstractFile || !(abstractFile instanceof TFile)) {
+      return;
+    }
+
+    const data = await this.app.vault.readBinary(abstractFile);
+    const contentBase64 = Buffer.from(data).toString("base64");
+    let sha: string | undefined;
+    try {
+      const remote = await this.client.getFile(normalized, branch);
+      sha = remote.sha;
+    } catch {
+      sha = undefined;
+    }
+
+    await this.client.putFile(normalized, contentBase64, `conflict: keep local ${path}`, sha, branch);
+  }
+
+  private async deleteLocal(path: string): Promise<void> {
+    const normalized = normalizePath(path);
+    const abstractFile = this.app.vault.getAbstractFileByPath(normalized);
+    if (!abstractFile || !(abstractFile instanceof TFile)) {
+      return;
+    }
+
+    await this.app.vault.delete(abstractFile);
+  }
+
+  private async deleteRemote(path: string, branch: string): Promise<void> {
+    let sha: string | undefined;
+    try {
+      const remote = await this.client.getFile(path, branch);
+      sha = remote.sha;
+    } catch {
+      sha = undefined;
+    }
+
+    if (!sha) {
+      return;
+    }
+
+    await this.client.deleteFile(path, `conflict: delete ${path}`, sha, branch);
+  }
+
+  private async copyLocal(sourcePath: string, targetPath: string): Promise<void> {
+    const normalized = normalizePath(sourcePath);
+    const abstractFile = this.app.vault.getAbstractFileByPath(normalized);
+    if (!abstractFile || !(abstractFile instanceof TFile)) {
+      return;
+    }
+
+    const data = await this.app.vault.readBinary(abstractFile);
+    await this.ensureParentFolder(targetPath);
+    await this.app.vault.createBinary(targetPath, data);
+  }
+
+  private async ensureParentFolder(path: string): Promise<void> {
+    const normalized = normalizePath(path);
+    const parent = normalized.split("/").slice(0, -1).join("/");
+    if (!parent) {
+      return;
+    }
+
+    const existing = this.app.vault.getAbstractFileByPath(parent);
+    if (existing) {
+      return;
+    }
+
+    const segments = parent.split("/");
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      if (!this.app.vault.getAbstractFileByPath(current)) {
+        await this.app.vault.createFolder(current);
+      }
+    }
+  }
+
+  private async nextConflictPath(path: string, tag: string): Promise<string> {
+    const normalized = normalizePath(path);
+    const timestamp = this.formatTimestamp(new Date());
+    const dotIndex = normalized.lastIndexOf(".");
+    const hasExt = dotIndex > normalized.lastIndexOf("/");
+    const base = hasExt ? normalized.slice(0, dotIndex) : normalized;
+    const ext = hasExt ? normalized.slice(dotIndex) : "";
+    let candidate = `${base} (${tag}-${timestamp})${ext}`;
+    let counter = 1;
+    while (this.app.vault.getAbstractFileByPath(candidate)) {
+      candidate = `${base} (${tag}-${timestamp}-${counter})${ext}`;
+      counter += 1;
+    }
+    return candidate;
+  }
+
+  private formatTimestamp(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}${month}${day}-${hours}${minutes}`;
+  }
+}

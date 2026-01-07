@@ -1,0 +1,130 @@
+import { App, PluginSettingTab, Setting } from "obsidian";
+import type GitHubApiSyncPlugin from "../main";
+
+export class SettingsView extends PluginSettingTab {
+  private plugin: GitHubApiSyncPlugin;
+
+  constructor(app: App, plugin: GitHubApiSyncPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    containerEl.createEl("h2", { text: "GitHub API Sync" });
+
+    new Setting(containerEl)
+      .setName("GitHub Token")
+      .setDesc("Requires repo scope for private repositories.")
+      .addText((text) =>
+        text
+          .setPlaceholder("ghp_...")
+          .setValue(this.plugin.settings.token)
+          .onChange(async (value) => {
+            this.plugin.settings.token = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Owner")
+      .addText((text) =>
+        text
+          .setPlaceholder("owner")
+          .setValue(this.plugin.settings.owner)
+          .onChange(async (value) => {
+            this.plugin.settings.owner = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Repository")
+      .addText((text) =>
+        text
+          .setPlaceholder("repo")
+          .setValue(this.plugin.settings.repo)
+          .onChange(async (value) => {
+            this.plugin.settings.repo = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Branch")
+      .addText((text) =>
+        text
+          .setPlaceholder("main")
+          .setValue(this.plugin.settings.branch)
+          .onChange(async (value) => {
+            this.plugin.settings.branch = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Root Path")
+      .setDesc("Vault-relative path to sync. Leave empty for entire vault.")
+      .addText((text) =>
+        text
+          .setPlaceholder("Journal")
+          .setValue(this.plugin.settings.rootPath)
+          .onChange(async (value) => {
+            this.plugin.settings.rootPath = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Ignore Patterns")
+      .setDesc("Comma-separated list of ignore patterns.")
+      .addTextArea((text) =>
+        text
+          .setPlaceholder(".obsidian/, .git/")
+          .setValue(this.plugin.settings.ignorePatterns.join(", "))
+          .onChange(async (value) => {
+            this.plugin.settings.ignorePatterns = value
+              .split(",")
+              .map((entry) => entry.trim())
+              .filter((entry) => entry.length > 0);
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Conflict Policy")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("keepBoth", "Keep both")
+          .addOption("preferLocal", "Prefer local")
+          .addOption("preferRemote", "Prefer remote")
+          .addOption("manual", "Manual")
+          .setValue(this.plugin.settings.conflictPolicy)
+          .onChange(async (value) => {
+            this.plugin.settings.conflictPolicy = value as typeof this.plugin.settings.conflictPolicy;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Sync Interval (minutes)")
+      .setDesc("Leave empty to disable scheduled sync.")
+      .addText((text) =>
+        text
+          .setPlaceholder("15")
+          .setValue(
+            this.plugin.settings.syncIntervalMinutes === null
+              ? ""
+              : String(this.plugin.settings.syncIntervalMinutes)
+          )
+          .onChange(async (value) => {
+            const trimmed = value.trim();
+            this.plugin.settings.syncIntervalMinutes =
+              trimmed.length === 0 ? null : Number(trimmed);
+            await this.plugin.saveSettings();
+          })
+      );
+  }
+}
