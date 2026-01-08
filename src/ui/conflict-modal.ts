@@ -36,9 +36,9 @@ export class ConflictModal extends Modal {
 
   private renderActions(container: HTMLElement, entry: ConflictRecord): void {
     const actionWrap = container.createEl("div");
-    const keepLocal = actionWrap.createEl("button", { text: "keep local" });
-    const keepRemote = actionWrap.createEl("button", { text: "keep remote" });
-    const keepBoth = actionWrap.createEl("button", { text: "keep both" });
+    const keepLocal = actionWrap.createEl("button", { text: "Keep local" });
+    const keepRemote = actionWrap.createEl("button", { text: "Keep remote" });
+    const keepBoth = actionWrap.createEl("button", { text: "Keep both" });
 
     keepLocal.onclick = async () => {
       await this.plugin.resolveConflict(entry, "keepLocal");

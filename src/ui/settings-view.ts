@@ -20,7 +20,7 @@ export class SettingsView extends PluginSettingTab {
       .setDesc("Requires repo scope for private repositories.")
       .addText((text) =>
         text
-          .setPlaceholder("ghp_...")
+          .setPlaceholder("Ghp_...")
           .setValue(this.plugin.settings.token)
           .onChange(async (value) => {
             this.plugin.settings.token = value.trim();
@@ -29,10 +29,10 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("owner")
+      .setName("Owner")
       .addText((text) =>
         text
-          .setPlaceholder("owner")
+          .setPlaceholder("Owner")
           .setValue(this.plugin.settings.owner)
           .onChange(async (value) => {
             this.plugin.settings.owner = value.trim();
@@ -41,10 +41,10 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("repository")
+      .setName("Repository")
       .addText((text) =>
         text
-          .setPlaceholder("repo")
+          .setPlaceholder("Repo")
           .setValue(this.plugin.settings.repo)
           .onChange(async (value) => {
             this.plugin.settings.repo = value.trim();
@@ -53,10 +53,10 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("branch")
+      .setName("Branch")
       .addText((text) =>
         text
-          .setPlaceholder("main")
+          .setPlaceholder("Main")
           .setValue(this.plugin.settings.branch)
           .onChange(async (value) => {
             this.plugin.settings.branch = value.trim();
@@ -97,10 +97,10 @@ export class SettingsView extends PluginSettingTab {
       .setName("Conflict policy")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("keepBoth", "keep both")
-          .addOption("preferLocal", "prefer local")
-          .addOption("preferRemote", "prefer remote")
-          .addOption("manual", "manual")
+          .addOption("keepBoth", "Keep both")
+          .addOption("preferLocal", "Prefer local")
+          .addOption("preferRemote", "Prefer remote")
+          .addOption("manual", "Manual")
           .setValue(this.plugin.settings.conflictPolicy)
           .onChange(async (value) => {
             this.plugin.settings.conflictPolicy = value as typeof this.plugin.settings.conflictPolicy;

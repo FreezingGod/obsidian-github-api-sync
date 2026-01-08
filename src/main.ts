@@ -70,7 +70,14 @@ export default class GitHubApiSyncPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    // Preserve existing state (baseline, conflicts, logs) when saving settings
+    const existing = await this.loadData();
+    await this.saveData({
+      baseline: existing?.baseline ?? null,
+      conflicts: existing?.conflicts ?? [],
+      logs: existing?.logs ?? [],
+      ...this.settings,
+    });
     this.scheduleSync();
   }
 
@@ -88,7 +95,7 @@ export default class GitHubApiSyncPlugin extends Plugin {
     record: ConflictRecord,
     action: "keepLocal" | "keepRemote" | "keepBoth"
   ): Promise<void> {
-    const { token, owner, repo } = this.settings;
+    const { token, owner, repo, ignorePatterns } = this.settings;
     const branch = this.settings.branch.trim() || "main";
     if (!token || !owner || !repo) {
       new Notice("Missing GitHub settings (token/owner/repo).");
@@ -98,6 +105,13 @@ export default class GitHubApiSyncPlugin extends Plugin {
     const client = new GitHubApiClient(token, owner, repo);
     const runner = new ConflictActionRunner(this.app, client);
     const store = new PluginStateStore(this);
+
+    // Always ignore the config directory (user-configurable, typically .obsidian/)
+    const configDirPattern = `${this.app.vault.configDir}/`;
+    const effectiveIgnorePatterns = ignorePatterns.includes(configDirPattern)
+      ? ignorePatterns
+      : [...ignorePatterns, configDirPattern];
+
     try {
       await runner.resolve(record, action, {
         token,
@@ -105,7 +119,7 @@ export default class GitHubApiSyncPlugin extends Plugin {
         repo,
         branch,
         rootPath: this.settings.rootPath,
-        ignorePatterns: this.settings.ignorePatterns,
+        ignorePatterns: effectiveIgnorePatterns,
         conflictPolicy: this.settings.conflictPolicy,
         syncIntervalMinutes: this.settings.syncIntervalMinutes ?? undefined,
         maxFileSizeMB: this.settings.maxFileSizeMB,
@@ -172,6 +186,12 @@ export default class GitHubApiSyncPlugin extends Plugin {
         }
       }
 
+      // Always ignore the config directory (user-configurable, typically .obsidian/)
+      const configDirPattern = `${this.app.vault.configDir}/`;
+      const effectiveIgnorePatterns = ignorePatterns.includes(configDirPattern)
+        ? ignorePatterns
+        : [...ignorePatterns, configDirPattern];
+
       const gitClient = new GitHubApiClient(token, owner, repo);
       const localIndexer = new LocalVaultIndexer(this.app);
       const remoteIndexer = new GitHubRemoteIndexer(gitClient);
@@ -201,7 +221,7 @@ export default class GitHubApiSyncPlugin extends Plugin {
           repo,
           branch,
           rootPath,
-          ignorePatterns,
+          ignorePatterns: effectiveIgnorePatterns,
           conflictPolicy,
           syncIntervalMinutes: this.settings.syncIntervalMinutes ?? undefined,
           maxFileSizeMB: this.settings.maxFileSizeMB,
