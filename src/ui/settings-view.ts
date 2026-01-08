@@ -29,7 +29,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Owner")
+      .setName("owner")
       .addText((text) =>
         text
           .setPlaceholder("owner")
@@ -41,7 +41,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Repository")
+      .setName("repository")
       .addText((text) =>
         text
           .setPlaceholder("repo")
@@ -53,7 +53,7 @@ export class SettingsView extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Branch")
+      .setName("branch")
       .addText((text) =>
         text
           .setPlaceholder("main")
@@ -82,7 +82,7 @@ export class SettingsView extends PluginSettingTab {
       .setDesc("Comma-separated list of ignore patterns.")
       .addTextArea((text) =>
         text
-          .setPlaceholder(".obsidian/, .git/")
+          .setPlaceholder(".git/")
           .setValue(this.plugin.settings.ignorePatterns.join(", "))
           .onChange(async (value) => {
             this.plugin.settings.ignorePatterns = value
@@ -97,10 +97,10 @@ export class SettingsView extends PluginSettingTab {
       .setName("Conflict policy")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("keepBoth", "Keep both")
-          .addOption("preferLocal", "Prefer local")
-          .addOption("preferRemote", "Prefer remote")
-          .addOption("manual", "Manual")
+          .addOption("keepBoth", "keep both")
+          .addOption("preferLocal", "prefer local")
+          .addOption("preferRemote", "prefer remote")
+          .addOption("manual", "manual")
           .setValue(this.plugin.settings.conflictPolicy)
           .onChange(async (value) => {
             this.plugin.settings.conflictPolicy = value as typeof this.plugin.settings.conflictPolicy;

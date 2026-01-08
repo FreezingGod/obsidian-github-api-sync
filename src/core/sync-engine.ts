@@ -263,7 +263,7 @@ export class DefaultSyncEngine implements SyncEngine {
       return;
     }
 
-    await this.app.vault.delete(abstractFile);
+    await this.app.fileManager.trashFile(abstractFile);
   }
 
   private async pullRemoteFile(path: string, branch: string): Promise<void> {
@@ -438,7 +438,7 @@ export class DefaultSyncEngine implements SyncEngine {
         reason === "delete-modify-local"
           ? "conflict-local"
           : "conflict-remote";
-      const conflictPath = await this.nextConflictPath(conflict.path, tag);
+      const conflictPath = this.nextConflictPath(conflict.path, tag);
 
       if (reason === "modify-modify") {
         await this.pullRemoteCopy(conflict.path, conflictPath, config.branch);

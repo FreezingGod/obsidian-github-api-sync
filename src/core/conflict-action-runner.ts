@@ -50,7 +50,7 @@ export class ConflictActionRunner {
       await this.pullRemote(record.path, config.branch);
       return;
     }
-    const conflictPath = await this.nextConflictPath(record.path, "conflict-manual");
+    const conflictPath = this.nextConflictPath(record.path, "conflict-manual");
     if (record.reason === "modify-modify") {
       await this.pullRemoteCopy(record.path, conflictPath, config.branch);
       return;
@@ -115,7 +115,7 @@ export class ConflictActionRunner {
       return;
     }
 
-    await this.app.vault.delete(abstractFile);
+    await this.app.fileManager.trashFile(abstractFile);
   }
 
   private async deleteRemote(path: string, branch: string): Promise<void> {
@@ -168,7 +168,7 @@ export class ConflictActionRunner {
     }
   }
 
-  private async nextConflictPath(path: string, tag: string): Promise<string> {
+  private nextConflictPath(path: string, tag: string): string {
     const normalized = normalizePath(path);
     const timestamp = this.formatTimestamp(new Date());
     const dotIndex = normalized.lastIndexOf(".");

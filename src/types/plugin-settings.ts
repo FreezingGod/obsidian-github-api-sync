@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   repo: "",
   branch: "main",
   rootPath: "",
-  ignorePatterns: [".obsidian/", ".git/"],
+  ignorePatterns: [".git/"],
   conflictPolicy: "keepBoth",
   syncIntervalMinutes: null,
   maxFileSizeMB: 50, // GitHub API limit is 100MB, use 50MB as safe default

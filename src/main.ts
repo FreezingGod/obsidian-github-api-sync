@@ -18,7 +18,7 @@ export default class GitHubApiSyncPlugin extends Plugin {
   settings: PluginSettings = { ...DEFAULT_SETTINGS };
   private syncIntervalId: number | null = null;
   private isSyncing = false;
-  private syncStatusNotice: Notice | null = null;
+  private syncStatusNotice = null;
   private ribbonIconEl: HTMLElement | null = null;
 
   async onload(): Promise<void> {

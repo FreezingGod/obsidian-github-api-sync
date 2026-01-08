@@ -57,6 +57,10 @@ export class FakeVault {
     this.files.delete((file as FakeTFile).path);
   }
 
+  async trashFile(file: TFile): Promise<void> {
+    this.files.delete((file as FakeTFile).path);
+  }
+
   async rename(file: TFile, newPath: string): Promise<void> {
     const path = (file as FakeTFile).path;
     const entry = this.files.get(path);
@@ -75,8 +79,14 @@ export class FakeVault {
 
 export class FakeApp {
   vault: FakeVault;
+  fileManager: { trashFile: (file: TFile) => Promise<void> };
 
   constructor(vault: FakeVault) {
     this.vault = vault;
+    this.fileManager = {
+      trashFile: async (file: TFile) => {
+        await this.vault.trashFile(file);
+      },
+    };
   }
 }
